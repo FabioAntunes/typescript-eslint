@@ -77,11 +77,36 @@ jobs:
           yarn test
         displayName: 'Run unit tests'
 
+  - job: unit_tests_on_deprecated_node_versions_for_prettier
+    displayName: Run unit tests on other Node.js v6 for Prettier support
+    pool:
+      vmImage: 'Ubuntu-16.04'
+    strategy:
+      maxParallel: 3
+      matrix:
+        node_6_x:
+          node_version: 6.x
+    steps:
+      - task: NodeTool@0
+        inputs:
+          versionSpec: $(node_version)
+        displayName: 'Install Node.js $(node_version)'
+
+      - script: |
+          # This also runs a build as part of the postinstall
+          # bootstrap
+          yarn --ignore-engines --frozen-lockfile
+
+      - script: |
+          yarn test --scope "@typescript-eslint/typescript-estree"
+        displayName: 'Run unit tests for typescript-estree'
+
   - job: publish_canary_version
     displayName: Publish the latest code as a canary version
     dependsOn:
-    - primary_code_validation_and_tests
-    - unit_tests_on_other_node_versions
+      - primary_code_validation_and_tests
+      - unit_tests_on_other_node_versions
+      - unit_tests_on_deprecated_node_versions_for_prettier
     condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'), ne(variables['Build.Reason'], 'PullRequest'))
     pool:
       vmImage: 'Ubuntu-16.04'
